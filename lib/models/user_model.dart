@@ -1,16 +1,65 @@
-class User {
+class UserPermission {
+  final int id;
+  final String name;
+  final String codename;
+
+  UserPermission({required this.id, required this.name, required this.codename});
+
+  factory UserPermission.fromJson(Map<String, dynamic> json) {
+    return UserPermission(id: json['id'], name: json['name'], codename: json['codename']);
+  }
+}
+
+class Branch {
   final String id;
   final String name;
+  final String address;
+  final String phone;
+
+  Branch({required this.id, required this.name, required this.address, required this.phone});
+
+  factory Branch.fromJson(Map<String, dynamic> json) {
+    return Branch(id: json['id'], name: json['name'], address: json['address'], phone: json['phone']);
+  }
+}
+
+class User {
+  final int id;
+  final String firstName;
+  final String lastName;
+  final String username;
   final String email;
+  final Branch branch;
+  final List<UserPermission> permissions;
 
-  User({required this.id, required this.name, required this.email});
+  User({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.username,
+    required this.email,
+    required this.branch,
+    required this.permissions,
+  });
 
-  // A factory constructor for creating a new User instance from a map.
+  String get fullName => '$firstName $lastName';
+
+  bool hasPermission(String codename) {
+    return permissions.any((p) => p.codename == codename);
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
+    var permissionsList = json['user_permissions'] as List;
+    List<UserPermission> parsedPermissions = permissionsList.map((p) => UserPermission.fromJson(p)).toList();
+
     return User(
       id: json['id'],
-      name: json['name'],
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      username: json['username'],
       email: json['email'],
+      branch: Branch.fromJson(json['branch']),
+      permissions: parsedPermissions,
     );
   }
 }
