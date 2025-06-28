@@ -15,24 +15,24 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   User? get user => _user;
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String username, String password) async {
     try {
-      final token = await _authService.login(email, password);
+      final token = await _authService.login(username, password);
       _token = token;
       await _storage.write(key: 'authToken', value: _token);
       await _fetchUserProfile();
       notifyListeners();
     } catch (e) {
-      rethrow; // Rethrow the exception to be caught in the UI
+      rethrow;
     }
   }
 
   Future<void> _fetchUserProfile() async {
     if (_token != null) {
       try {
+        // We only need to pass the token
         _user = await _profileService.getProfile(_token!);
       } catch (e) {
-        // If profile fetch fails, treat as logout
         await logout();
       }
     }
