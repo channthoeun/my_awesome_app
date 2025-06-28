@@ -44,6 +44,21 @@ class User {
 
   String get fullName => '$firstName $lastName';
 
+  // ADD THIS GETTER
+  String get initials {
+    // Handles cases where names might be empty
+    final List<String> nameParts = fullName.trim().split(' ');
+    if (nameParts.isEmpty || nameParts.first.isEmpty) {
+      return '?';
+    }
+    final String firstInitial = nameParts.first[0].toUpperCase();
+    if (nameParts.length > 1 && nameParts.last.isNotEmpty) {
+      final String lastInitial = nameParts.last[0].toUpperCase();
+      return '$firstInitial$lastInitial';
+    }
+    return firstInitial;
+  }
+
   bool hasPermission(String codename) {
     return permissions.any((p) => p.codename == codename);
   }
