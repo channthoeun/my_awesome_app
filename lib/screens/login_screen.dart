@@ -11,8 +11,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'test@test.com');
-  final _passwordController = TextEditingController(text: 'password');
+  // Update controllers with the provided credentials for easy testing
+  final _usernameController = TextEditingController(text: 'channthoeun');
+  final _passwordController = TextEditingController(text: 'Thoeun051182');
   bool _isLoading = false;
 
   Future<void> _submit() async {
@@ -24,8 +25,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      // Pass username to the provider's login method
       await Provider.of<AuthProvider>(context, listen: false).login(
-        _emailController.text,
+        _usernameController.text,
         _passwordController.text,
       );
       // Navigation is handled by the main.dart Consumer
@@ -60,12 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text('My Awesome App', style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _usernameController,
+                  // Updated label and validator
+                  decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || !value.contains('@')) {
-                      return 'Please enter a valid email.';
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a username.';
                     }
                     return null;
                   },
@@ -76,8 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return 'Password must be at least 6 characters long.';
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password.';
                     }
                     return null;
                   },
