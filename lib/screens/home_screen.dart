@@ -3,6 +3,7 @@ import 'package:my_awesome_app/providers/auth_provider.dart';
 import 'package:my_awesome_app/screens/tabs/dashboard_tab.dart';
 import 'package:my_awesome_app/screens/tabs/profile_tab.dart';
 import 'package:my_awesome_app/screens/tabs/upload_tab.dart';
+import 'package:my_awesome_app/widgets/custom_app_bar.dart'; // <-- Import the new widget
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,20 +27,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // This function will be passed to the AppBar to handle profile avatar taps
+  void _navigateToProfile() {
+    setState(() {
+      _selectedIndex = 1; // Index 1 is the ProfileTab
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Get the user from the provider
+    final user = Provider.of<AuthProvider>(context).user;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              // Call the logout method from AuthProvider
-              Provider.of<AuthProvider>(context, listen: false).logout();
-            },
-          ),
-        ],
+      // Replace the old AppBar with our new CustomAppBar
+      appBar: CustomAppBar(
+        user: user,
+        onProfileTap: _navigateToProfile,
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
