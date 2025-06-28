@@ -14,7 +14,7 @@ class DashboardTab extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Welcome, ${user?.name ?? 'User'}!',
+            'Welcome, ${user?.fullName ?? 'User'}!',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 20),
