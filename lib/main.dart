@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:my_awesome_app/providers/auth_provider.dart';
 import 'package:my_awesome_app/screens/home_screen.dart';
 import 'package:my_awesome_app/screens/login_screen.dart';
@@ -6,7 +7,9 @@ import 'package:my_awesome_app/screens/splash_screen.dart';
 import 'package:my_awesome_app/utils/app_routes.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+Future<void>  main() async {
+  // Load the .env file
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
