@@ -112,10 +112,19 @@ class _DashboardTabState extends State<DashboardTab> {
                     final pet = pets[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: (pet.fullImageUrl != null)
+                        backgroundImage: (pet.fullImageUrl != null && pet.imageUrl!.isNotEmpty)
                             ? NetworkImage(pet.fullImageUrl!)
                             : null,
-                        child: (pet.fullImageUrl == null) ? const Icon(Icons.pets) : null,
+                        child: (pet.imageUrl == null || pet.imageUrl!.isEmpty)
+                          // Use the new initials getter!
+                          ? Text(
+                              pet.initials,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.indigo.shade800,
+                              ),
+                            )
+                          : null,
                       ),
                       title: Text(pet.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text('Code: ${pet.code} - Owner: ${pet.owner.fullName}'),
