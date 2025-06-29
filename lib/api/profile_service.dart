@@ -1,32 +1,29 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:my_awesome_app/api/api_client.dart';
 import 'package:my_awesome_app/models/user_model.dart';
-import 'package:my_awesome_app/utils/app_config.dart';
 
 class ProfileService {
-  final String _baseUrl = AppConfig.baseUrl;
+  final ApiClient _apiClient = ApiClient();
 
-  // This method only needs the token.
-  // The backend uses the token to identify the user.
+  /// Fetches the detailed profile of the currently logged-in user.
+  ///
+  /// Requires a valid [token] for authorization.
+  /// Throws [UnauthorizedException] if the token is invalid/expired.
+  /// Throws other [ApiException] subtypes on other errors.
   Future<User> getProfile(String token) async {
-    // IMPORTANT: Make sure your backend has this endpoint.
-    final url = Uri.parse('$_baseUrl/api/user/me');
-
     try {
-      final response = await http.get(
-        url,
+      final response = await _apiClient.get(
+        '/api/users/me', // The "me" endpoint
         headers: {
           'Authorization': 'Bearer $token',
         },
       );
 
-      if (response.statusCode == 200) {
-        return User.fromJson(json.decode(response.body));
-      } else {
-        throw Exception('Failed to load profile. Status code: ${response.statusCode}');
-      }
+      // ApiClient returns a Map<String, dynamic>, which is perfect
+      // for our fromJson factory.
+      return User.fromJson(response);
     } catch (e) {
-      throw Exception('An error occurred while fetching the profile.');
+      // Re-throw for the AuthProvider or UI layer to handle
+      rethrow;
     }
   }
 }
