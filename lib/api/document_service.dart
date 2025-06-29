@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:my_awesome_app/api/api_exceptions.dart';
+import 'package:my_awesome_app/utils/api_endpoints.dart';
 import 'package:my_awesome_app/utils/app_config.dart';
 
 class DocumentService {
@@ -12,7 +13,7 @@ class DocumentService {
   /// Throws [UnauthorizedException] on 401/403 errors.
   /// Throws [ApiException] on other errors.
   Future<String> uploadDocument(File file, String token) async {
-    final url = Uri.parse('$_baseUrl/documents/upload');
+    final url = Uri.parse(ApiEndpoints.documentUpload);
 
     try {
       // Create a multipart request
