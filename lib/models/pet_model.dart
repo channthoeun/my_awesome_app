@@ -107,11 +107,19 @@ class Pet {
     this.imageUrl,
   });
 
+  String get initials {
+    if (name.trim().isEmpty) {
+      return '?'; // Fallback for empty names
+    }
+    // Takes the first character of the name and capitalizes it.
+    return name.trim().substring(0, 2).toUpperCase();
+  }
+
   // Helper getter to create a full, usable image URL
   String? get fullImageUrl {
     if (imageUrl == null || imageUrl!.isEmpty) return null;
     // Assuming your .env BASE_URL is something like http://10.0.2.2:8000
-    return AppConfig.baseUrl + imageUrl!;
+    return '${AppConfig.baseUrl}/api${imageUrl!}';
   }
 
   String get qrData => 'pet_id:$id';
