@@ -1,32 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:my_awesome_app/utils/app_config.dart';
+import 'package:my_awesome_app/api/api_client.dart';
 
 class AuthService {
-  final String _baseUrl = AppConfig.baseUrl;
+  final ApiClient _apiClient = ApiClient();
+  final String _url = '/auth/token';
 
+  /// Logs the user in and returns the access token.
+  ///
+  /// Throws [ApiException] or its subtypes on API errors.
   Future<String> login(String username, String password) async {
-    final url = Uri.parse('$_baseUrl/auth/token');
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'username': username, 'password': password}),
+      // Use the new post method from our ApiClient
+      final response = await _apiClient.post(
+        _url,
+        body: {
+          'username': username,
+          'password': password,
+        },
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final accessToken = data['access_token'];
-        if (accessToken != null) {
-          return accessToken;
-        } else {
-          throw Exception('Access token not found in response.');
-        }
+      // The response is already a Map<String, dynamic> thanks to ApiClient
+      final accessToken = response['access_token'];
+      if (accessToken != null) {
+        return accessToken;
       } else {
-        throw Exception('Failed to login. Status code: ${response.statusCode}');
+        // This case is unlikely if the API is well-behaved, but good for safety
+        throw Exception('Access token not found in login response.');
       }
     } catch (e) {
-      throw Exception('An error occurred during login.');
+      // Re-throw the structured exception for the UI to handle
+      rethrow;
     }
   }
 }
