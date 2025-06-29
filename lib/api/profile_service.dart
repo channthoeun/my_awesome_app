@@ -12,7 +12,7 @@ class ProfileService {
   Future<User> getProfile(String token) async {
     try {
       final response = await _apiClient.get(
-        '/api/users/me', // The "me" endpoint
+        '/api/user/me', // The "me" endpoint
         headers: {
           'Authorization': 'Bearer $token',
         },
