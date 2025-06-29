@@ -21,6 +21,22 @@ class ApiClient {
 
   // You can add post, put, delete methods here following the same pattern
 
+  Future<dynamic> post(String endpoint, {dynamic body, Map<String, String>? headers}) async {
+    dynamic responseJson;
+    try {
+      final url = Uri.parse(_baseUrl + endpoint);
+      final response = await http.post(
+        url,
+        body: json.encode(body), // Encode the body to JSON
+        headers: headers ?? {'Content-Type': 'application/json'},
+      );
+      responseJson = _handleResponse(response);
+    } on SocketException {
+      throw ApiException('No Internet connection');
+    }
+    return responseJson;
+  }
+
   dynamic _handleResponse(http.Response response) {
     switch (response.statusCode) {
       case 200:
