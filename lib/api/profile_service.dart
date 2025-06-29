@@ -1,5 +1,6 @@
 import 'package:my_awesome_app/api/api_client.dart';
 import 'package:my_awesome_app/models/user_model.dart';
+import 'package:my_awesome_app/utils/api_endpoints.dart';
 
 class ProfileService {
   final ApiClient _apiClient = ApiClient();
@@ -12,7 +13,7 @@ class ProfileService {
   Future<User> getProfile(String token) async {
     try {
       final response = await _apiClient.get(
-        '/api/user/me', // The "me" endpoint
+        ApiEndpoints.userProfile,
         headers: {
           'Authorization': 'Bearer $token',
         },
