@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:my_awesome_app/utils/app_config.dart';
 import 'package:my_awesome_app/api/api_client.dart';
+import 'package:my_awesome_app/utils/api_endpoints.dart';
 
 class AuthService {
   final ApiClient _apiClient = ApiClient();
-  final String _url = '/auth/token';
 
   /// Logs the user in and returns the access token.
   ///
@@ -14,7 +14,7 @@ class AuthService {
     try {
       // Use the new post method from our ApiClient
       final response = await _apiClient.post(
-        _url,
+        ApiEndpoints.login,
         body: {
           'username': username,
           'password': password,
