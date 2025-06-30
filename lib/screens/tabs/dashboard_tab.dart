@@ -19,48 +19,40 @@ class _DashboardTabState extends State<DashboardTab> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoadingDetails = false;
 
-  /// Handles the entire flow of fetching full pet details and navigating to the detail screen.
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Handles the entire flow of fetching full pet details and navigating.
   /// Includes robust error handling for API exceptions.
   Future<void> _fetchDetailsAndNavigate(String petId, String token) async {
-    // Show a loading indicator on the main screen
     setState(() {
       _isLoadingDetails = true;
     });
 
     try {
-      // Fetch the full, detailed pet object from the service
       final detailedPet = await _petService.getPetDetails(petId, token);
-
-      // IMPORTANT: Check if the widget is still in the tree before navigating.
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PetDetailScreen(pet: detailedPet)),
         );
       }
     } on UnauthorizedException catch (e) {
-      // --- CATCHES 401/403 ERRORS ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: Colors.amber.shade800,
-          ),
+          SnackBar(content: Text(e.message), backgroundColor: Colors.amber.shade800),
         );
-        // Log the user out, which will trigger a rebuild to the login screen
         Provider.of<AuthProvider>(context, listen: false).logout();
       }
     } catch (e) {
-      // --- CATCHES ALL OTHER ERRORS (Network, Server, etc.) ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('An error occurred: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      // IMPORTANT: Always turn off the loading indicator, whether success or failure.
       if (mounted) {
         setState(() {
           _isLoadingDetails = false;
@@ -69,11 +61,12 @@ class _DashboardTabState extends State<DashboardTab> {
     }
   }
 
-  /// Opens a modal bottom sheet to display a list of pets fetched from the API.
+  /// Opens a modal bottom sheet to display a list of pets, with filtering.
   void _showPetSelectionSheet(BuildContext context) {
-    // Get the auth token once before opening the sheet
     final token = Provider.of<AuthProvider>(context, listen: false).token;
     if (token == null) return;
+
+    final String searchTerm = _searchController.text.trim().toLowerCase();
 
     showModalBottomSheet(
       context: context,
@@ -84,52 +77,56 @@ class _DashboardTabState extends State<DashboardTab> {
           initialChildSize: 0.6,
           maxChildSize: 0.9,
           builder: (_, scrollController) {
-            // FutureBuilder handles the async call to get the pet list
             return FutureBuilder<List<Pet>>(
               future: _petService.getPets(token),
               builder: (context, snapshot) {
-                // --- LOADING STATE ---
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
-                // --- ERROR STATE ---
                 if (snapshot.hasError) {
                   return _buildErrorState(context, snapshot.error);
                 }
-
-                // --- EMPTY STATE ---
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('No pets found.'));
                 }
 
-                // --- SUCCESS STATE ---
-                final pets = snapshot.data!;
+                List<Pet> allPets = snapshot.data!;
+                List<Pet> filteredPets = allPets;
+
+                if (searchTerm.isNotEmpty) {
+                  filteredPets = allPets.where((pet) {
+                    final petName = pet.name.toLowerCase();
+                    final petCode = pet.code.toLowerCase();
+                    final ownerName = pet.owner.fullName.toLowerCase();
+                    return petName.contains(searchTerm) ||
+                        petCode.contains(searchTerm) ||
+                        ownerName.contains(searchTerm);
+                  }).toList();
+                }
+
+                if (filteredPets.isEmpty) {
+                  return Center(child: Text('No pets found for "$searchTerm"'));
+                }
+
                 return ListView.builder(
                   controller: scrollController,
-                  itemCount: pets.length,
+                  itemCount: filteredPets.length,
                   itemBuilder: (context, index) {
-                    final pet = pets[index];
+                    final pet = filteredPets[index];
                     return ListTile(
                       leading: CircleAvatar(
+                        backgroundColor: Colors.indigo.shade100,
                         backgroundImage: (pet.fullImageUrl != null && pet.imageUrl!.isNotEmpty)
                             ? NetworkImage(pet.fullImageUrl!)
                             : null,
                         child: (pet.imageUrl == null || pet.imageUrl!.isEmpty)
-                          // Use the new initials getter!
-                          ? Text(
-                              pet.initials,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.indigo.shade800,
-                              ),
-                            )
-                          : null,
+                            ? Text(pet.initials, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800))
+                            : null,
                       ),
                       title: Text(pet.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text('Code: ${pet.code} - Owner: ${pet.owner.fullName}'),
                       onTap: () {
-                        Navigator.of(context).pop(); // Close the sheet
+                        Navigator.of(context).pop();
                         _fetchDetailsAndNavigate(pet.id, token);
                       },
                     );
@@ -143,7 +140,7 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  /// Helper widget to display an appropriate error message inside the bottom sheet.
+  /// Helper widget to display an error message inside the bottom sheet.
   Widget _buildErrorState(BuildContext context, Object? error) {
     String errorMessage = 'An unknown error occurred.';
     bool isUnauthorized = false;
@@ -169,7 +166,6 @@ class _DashboardTabState extends State<DashboardTab> {
               ElevatedButton(
                 child: const Text('Go to Login'),
                 onPressed: () {
-                  // Use listen:false in callbacks
                   Provider.of<AuthProvider>(context, listen: false).logout();
                 },
               ),
@@ -179,17 +175,14 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  // Navigation logic for the scanner (can be integrated with search)
+  /// Navigates to the QR scanner screen and handles the result.
   Future<void> _navigateToScanner(BuildContext context) async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (ctx) => const QrScannerScreen()),
     );
-
     if (result != null && result.isNotEmpty && mounted) {
       _searchController.text = result;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Scanned: $result')),
-      );
+      _showPetSelectionSheet(context); // Automatically search after scan
     }
   }
 
@@ -211,38 +204,59 @@ class _DashboardTabState extends State<DashboardTab> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Select an option below to get started.',
+              'Search for a pet or view the complete list.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const Spacer(),
-
-            // Main action button to show the pet list
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Search by Name, Code, or Owner...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onSubmitted: (_) {
+                      FocusScope.of(context).unfocus();
+                      _showPetSelectionSheet(context);
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    _showPetSelectionSheet(context);
+                  },
+                  tooltip: 'Search Pets',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: () => _navigateToScanner(context),
+                  tooltip: 'Scan a Code',
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             if (_isLoadingDetails)
               const Center(child: CircularProgressIndicator())
             else
               ElevatedButton.icon(
                 icon: const Icon(Icons.list_alt, size: 28),
-                label: const Text('Show Pet List'),
-                onPressed: () => _showPetSelectionSheet(context),
+                label: const Text('Show Full Pet List'),
+                onPressed: () {
+                  FocusScope.of(context).unfocus();
+                  _searchController.clear();
+                  _showPetSelectionSheet(context);
+                },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 18),
                 ),
               ),
-
-            const SizedBox(height: 16),
-            // Optional: Add other dashboard actions here if needed
-            // For example, a quick access to the QR scanner
-            OutlinedButton.icon(
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan a Code'),
-              onPressed: () => _navigateToScanner(context),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-
             const Spacer(),
           ],
         ),
