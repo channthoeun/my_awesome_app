@@ -13,8 +13,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Initialize with empty text for production
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController(text: 'channthoeun');
+  final _passwordController = TextEditingController(text: 'Thoeun051182');
 
   // State variables for loading and password visibility
   bool _isLoading = false;
