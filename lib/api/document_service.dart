@@ -2,11 +2,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:my_awesome_app/api/api_exceptions.dart';
 import 'package:my_awesome_app/utils/api_endpoints.dart';
-import 'package:my_awesome_app/utils/app_config.dart';
 
 class DocumentService {
-  final String _baseUrl = AppConfig.baseUrl;
-
   /// Uploads a document using a multipart request.
   ///
   /// Requires the [file] to upload and a valid [token].
