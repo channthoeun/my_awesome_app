@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:my_awesome_app/utils/app_config.dart';
 import 'package:my_awesome_app/api/api_client.dart';
 import 'package:my_awesome_app/utils/api_endpoints.dart';
 
@@ -20,7 +17,7 @@ class AuthService {
           'password': password,
         },
       );
-
+      
       // The response is already a Map<String, dynamic> thanks to ApiClient
       final accessToken = response['access_token'];
       if (accessToken != null) {
