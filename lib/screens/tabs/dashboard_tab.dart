@@ -213,61 +213,64 @@ class _DashboardTabState extends State<DashboardTab> {
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const Spacer(),
-            if (_isLoading)
-              const Center(child: Padding(
-                padding: EdgeInsets.only(bottom: 24.0),
-                child: CircularProgressIndicator(),
-              ))
-            else
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            hintText: 'Search by Name, Code, or Owner...',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                          ),
-                          onSubmitted: (_) {
-                            FocusScope.of(context).unfocus();
-                            _performSearch(_searchController.text.trim());
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          FocusScope.of(context).unfocus();
-                          _performSearch(_searchController.text.trim());
-                        },
-                        tooltip: 'Search Pets',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_scanner),
-                        onPressed: () => _navigateToScanner(context),
-                        tooltip: 'Scan a Code',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.list_alt, size: 28),
-                    label: const Text('Show Full Pet List'),
-                    onPressed: () {
+
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    enabled: !_isLoading, // Disable text field while loading
+                    decoration: const InputDecoration(
+                      hintText: 'Search by Name, Code, or Owner...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onSubmitted: (_) {
                       FocusScope.of(context).unfocus();
-                      _searchController.clear();
-                      _performSearch('');
+                      _performSearch(_searchController.text.trim());
                     },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 18),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _isLoading ? null : () {
+                    FocusScope.of(context).unfocus();
+                    _performSearch(_searchController.text.trim());
+                  },
+                  tooltip: 'Search Pets',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: _isLoading ? null : () => _navigateToScanner(context),
+                  tooltip: 'Scan a Code',
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              SizedBox(
+                width: double.infinity, // Force the button to take the full available width
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.list_alt, size: 24),
+                  label: const Text('Show Full Pet List'),
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    _searchController.clear();
+                    _performSearch('');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ],
+                ),
               ),
+
             const Spacer(),
           ],
         ),
