@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:logging/logging.dart';
 import 'package:my_awesome_app/api/auth_service.dart';
 import 'package:my_awesome_app/api/profile_service.dart';
 import 'package:my_awesome_app/models/user_model.dart';
 
 class AuthProvider with ChangeNotifier {
+  final _log = Logger('AuthProvider'); // <-- Create logger
+
   // --- STATE ---
   // The only pieces of state we need are the token and the user object.
   String? _token;
@@ -22,10 +25,12 @@ class AuthProvider with ChangeNotifier {
 
   /// Logs the user in by getting a token and then fetching the user profile.
   Future<void> login(String username, String password) async {
+    _log.info('Attempting login for user: $username');
     try {
       // 1. Get ONLY the access token from the auth service.
       final token = await _authService.login(username, password);
       _token = token;
+      _log.config('Login successful, token received.'); // Use config for setup info
 
       // 2. Persist the token to secure storage.
       await _storage.write(key: 'authToken', value: _token);
@@ -35,7 +40,8 @@ class AuthProvider with ChangeNotifier {
 
       // 4. Notify listeners to rebuild the UI (e.g., navigate to home screen).
       notifyListeners();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.severe('Login failed for user: $username', e, stackTrace); // <-- Log errors with stack trace
       // If anything fails, re-throw the exception to be caught by the LoginScreen.
       rethrow;
     }
@@ -61,6 +67,7 @@ class AuthProvider with ChangeNotifier {
 
   /// Attempts to automatically log in the user at app startup.
   Future<bool> tryAutoLogin() async {
+    _log.info('Attempting auto-login...');
     // 1. Read the token from secure storage.
     final token = await _storage.read(key: 'authToken');
     if (token == null) {
@@ -80,6 +87,7 @@ class AuthProvider with ChangeNotifier {
 
   /// Logs the user out by clearing all session data.
   Future<void> logout() async {
+    _log.info('User logged out.');
     _token = null;
     _user = null;
 

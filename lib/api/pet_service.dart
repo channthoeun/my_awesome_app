@@ -6,7 +6,7 @@ class PetService {
   final ApiClient _apiClient = ApiClient();
 
   Future<List<Pet>> getPets(String token) async {
-    print('PetService, getPets, ApiEndpoints.pet: $ApiEndpoints.pet');
+    print('PetService, getPets, ApiEndpoints.pet: ${ApiEndpoints.pet}');
     try {
       // 1. Await the response from the ApiClient. It will be of type 'dynamic'.
       final dynamic responseData = await _apiClient.get(

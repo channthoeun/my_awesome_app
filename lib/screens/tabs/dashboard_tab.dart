@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:my_awesome_app/api/api_exceptions.dart';
 import 'package:my_awesome_app/api/pet_service.dart';
 import 'package:my_awesome_app/models/pet_model.dart';
@@ -15,6 +16,7 @@ class DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<DashboardTab> {
+  final _log = Logger('DashboardTab'); // <-- Create logger
   final PetService _petService = PetService();
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
@@ -29,6 +31,7 @@ class _DashboardTabState extends State<DashboardTab> {
   /// Fetches the pet list and filters it based on the search term.
   /// Decides whether to navigate directly to details or show a list.
   Future<void> _performSearch(String searchTerm) async {
+    _log.info('Performing search for term: "$searchTerm"');
     final token = Provider.of<AuthProvider>(context, listen: false).token;
     if (token == null) return;
 
@@ -154,6 +157,7 @@ class _DashboardTabState extends State<DashboardTab> {
 
   /// Navigates to the QR scanner and processes the result.
   Future<void> _navigateToScanner(BuildContext context) async {
+    _log.info('Navigating to QR scanner.');
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (ctx) => const QrScannerScreen()),
     );
@@ -171,7 +175,8 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 
   /// Centralized handler for API errors.
-  void _handleApiError(Object e) {
+  void _handleApiError(Object e, [StackTrace? stackTrace]) {
+    _log.severe('API Error encountered on dashboard', e, stackTrace);
     if (!mounted) return;
     if (e is UnauthorizedException) {
       ScaffoldMessenger.of(context).showSnackBar(
