@@ -17,7 +17,7 @@ class DashboardTab extends StatefulWidget {
 class _DashboardTabState extends State<DashboardTab> {
   final PetService _petService = PetService();
   final TextEditingController _searchController = TextEditingController();
-  bool _isLoadingDetails = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,13 +25,74 @@ class _DashboardTabState extends State<DashboardTab> {
     super.dispose();
   }
 
-  /// Handles the entire flow of fetching full pet details and navigating.
-  /// Includes robust error handling for API exceptions.
-  Future<void> _fetchDetailsAndNavigate(String petId, String token) async {
-    setState(() {
-      _isLoadingDetails = true;
-    });
+  /// The main, unified search function.
+  /// Fetches the pet list and filters it based on the search term.
+  /// Decides whether to navigate directly to details or show a list.
+  Future<void> _performSearch(String searchTerm) async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    if (token == null) return;
 
+    // A simple check to see if the search term is likely an ID.
+    // In a real app, a more robust regex might be better.
+    bool isSearchById = searchTerm.length > 20 && searchTerm.contains('-');
+
+    setState(() { _isLoading = true; });
+
+    try {
+      final List<Pet> allPets = await _petService.getPets(token);
+      List<Pet> filteredPets = [];
+
+      if (isSearchById) {
+        // --- EXACT MATCH LOGIC for ID ---
+        filteredPets = allPets.where((pet) => pet.id == searchTerm).toList();
+      } else {
+        // --- FUZZY SEARCH LOGIC for text ---
+        final lowerCaseSearchTerm = searchTerm.toLowerCase();
+        if (lowerCaseSearchTerm.isNotEmpty) {
+          filteredPets = allPets.where((pet) {
+            return pet.name.toLowerCase().contains(lowerCaseSearchTerm) ||
+                pet.code.toLowerCase().contains(lowerCaseSearchTerm) ||
+                pet.owner.fullName.toLowerCase().contains(lowerCaseSearchTerm);
+          }).toList();
+        } else {
+          // If search term is empty, the result is the full list.
+          filteredPets = allPets;
+        }
+      }
+
+      if (!mounted) return;
+
+      if (filteredPets.length == 1) {
+        // If exactly one match, go straight to details. This also handles the ID search case.
+        // We set _isLoading to false inside _fetchDetailsAndNavigate
+        _fetchDetailsAndNavigate(filteredPets.first.id, token);
+      } else if (filteredPets.isNotEmpty) {
+        // If multiple matches, show the list.
+        setState(() { _isLoading = false; });
+        _showFilteredPetList(filteredPets, token);
+      } else {
+        // If no matches, show a snackbar.
+        setState(() { _isLoading = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No pet found for "$searchTerm"')),
+        );
+      }
+    } on UnauthorizedException catch (e) {
+      _handleApiError(e);
+    } catch (e) {
+      _handleApiError(e);
+    } finally {
+      // Final check to ensure loading indicator is turned off if an
+      // unexpected path is taken.
+      if (mounted && _isLoading) {
+        setState(() { _isLoading = false; });
+      }
+    }
+  }
+
+  /// Fetches full details for a single pet and navigates to its screen.
+  Future<void> _fetchDetailsAndNavigate(String petId, String token) async {
+    // The loading state is already true from _performSearch.
     try {
       final detailedPet = await _petService.getPetDetails(petId, token);
       if (mounted) {
@@ -40,34 +101,18 @@ class _DashboardTabState extends State<DashboardTab> {
         );
       }
     } on UnauthorizedException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.amber.shade800),
-        );
-        Provider.of<AuthProvider>(context, listen: false).logout();
-      }
+      _handleApiError(e);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
-        );
-      }
+      _handleApiError(e);
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoadingDetails = false;
-        });
+        setState(() { _isLoading = false; });
       }
     }
   }
 
-  /// Opens a modal bottom sheet to display a list of pets, with filtering.
-  void _showPetSelectionSheet(BuildContext context) {
-    final token = Provider.of<AuthProvider>(context, listen: false).token;
-    if (token == null) return;
-
-    final String searchTerm = _searchController.text.trim().toLowerCase();
-
+  /// Displays a pre-filtered list of pets in a modal bottom sheet.
+  void _showFilteredPetList(List<Pet> pets, String token) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -77,59 +122,26 @@ class _DashboardTabState extends State<DashboardTab> {
           initialChildSize: 0.6,
           maxChildSize: 0.9,
           builder: (_, scrollController) {
-            return FutureBuilder<List<Pet>>(
-              future: _petService.getPets(token),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return _buildErrorState(context, snapshot.error);
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No pets found.'));
-                }
-
-                List<Pet> allPets = snapshot.data!;
-                List<Pet> filteredPets = allPets;
-
-                if (searchTerm.isNotEmpty) {
-                  filteredPets = allPets.where((pet) {
-                    final petName = pet.name.toLowerCase();
-                    final petCode = pet.code.toLowerCase();
-                    final ownerName = pet.owner.fullName.toLowerCase();
-                    return petName.contains(searchTerm) ||
-                        petCode.contains(searchTerm) ||
-                        ownerName.contains(searchTerm);
-                  }).toList();
-                }
-
-                if (filteredPets.isEmpty) {
-                  return Center(child: Text('No pets found for "$searchTerm"'));
-                }
-
-                return ListView.builder(
-                  controller: scrollController,
-                  itemCount: filteredPets.length,
-                  itemBuilder: (context, index) {
-                    final pet = filteredPets[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.indigo.shade100,
-                        backgroundImage: (pet.fullImageUrl != null && pet.imageUrl!.isNotEmpty)
-                            ? NetworkImage(pet.fullImageUrl!)
-                            : null,
-                        child: (pet.imageUrl == null || pet.imageUrl!.isEmpty)
-                            ? Text(pet.initials, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800))
-                            : null,
-                      ),
-                      title: Text(pet.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Code: ${pet.code} - Owner: ${pet.owner.fullName}'),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        _fetchDetailsAndNavigate(pet.id, token);
-                      },
-                    );
+            return ListView.builder(
+              controller: scrollController,
+              itemCount: pets.length,
+              itemBuilder: (context, index) {
+                final pet = pets[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.indigo.shade100,
+                    backgroundImage: (pet.imageUrl != null && pet.imageUrl!.isNotEmpty)
+                        ? NetworkImage(pet.fullImageUrl!)
+                        : null,
+                    child: (pet.imageUrl == null || pet.imageUrl!.isEmpty)
+                        ? Text(pet.initials, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800))
+                        : null,
+                  ),
+                  title: Text(pet.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Code: ${pet.code} - Owner: ${pet.owner.fullName}'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _fetchDetailsAndNavigate(pet.id, token);
                   },
                 );
               },
@@ -140,49 +152,36 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  /// Helper widget to display an error message inside the bottom sheet.
-  Widget _buildErrorState(BuildContext context, Object? error) {
-    String errorMessage = 'An unknown error occurred.';
-    bool isUnauthorized = false;
-
-    if (error is UnauthorizedException) {
-      errorMessage = error.message;
-      isUnauthorized = true;
-    } else if (error is ApiException) {
-      errorMessage = error.message;
-    } else {
-      errorMessage = error.toString();
-    }
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(errorMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            if (isUnauthorized)
-              ElevatedButton(
-                child: const Text('Go to Login'),
-                onPressed: () {
-                  Provider.of<AuthProvider>(context, listen: false).logout();
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Navigates to the QR scanner screen and handles the result.
+  /// Navigates to the QR scanner and processes the result.
   Future<void> _navigateToScanner(BuildContext context) async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (ctx) => const QrScannerScreen()),
     );
     if (result != null && result.isNotEmpty && mounted) {
-      _searchController.text = result;
-      _showPetSelectionSheet(context); // Automatically search after scan
+      if (result.startsWith('pet_id:')) {
+        final petId = result.substring('pet_id:'.length);
+        _performSearch(petId);
+      } else {
+        _searchController.text = result;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Scanned: "$result". Press search to find.')),
+        );
+      }
+    }
+  }
+
+  /// Centralized handler for API errors.
+  void _handleApiError(Object e) {
+    if (!mounted) return;
+    if (e is UnauthorizedException) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.amber.shade800),
+      );
+      Provider.of<AuthProvider>(context, listen: false).logout();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -209,53 +208,60 @@ class _DashboardTabState extends State<DashboardTab> {
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Search by Name, Code, or Owner...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    onSubmitted: (_) {
-                      FocusScope.of(context).unfocus();
-                      _showPetSelectionSheet(context);
-                    },
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    _showPetSelectionSheet(context);
-                  },
-                  tooltip: 'Search Pets',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.qr_code_scanner),
-                  onPressed: () => _navigateToScanner(context),
-                  tooltip: 'Scan a Code',
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_isLoadingDetails)
-              const Center(child: CircularProgressIndicator())
+            if (_isLoading)
+              const Center(child: Padding(
+                padding: EdgeInsets.only(bottom: 24.0),
+                child: CircularProgressIndicator(),
+              ))
             else
-              ElevatedButton.icon(
-                icon: const Icon(Icons.list_alt, size: 28),
-                label: const Text('Show Full Pet List'),
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  _searchController.clear();
-                  _showPetSelectionSheet(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18),
-                ),
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            hintText: 'Search by Name, Code, or Owner...',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                          onSubmitted: (_) {
+                            FocusScope.of(context).unfocus();
+                            _performSearch(_searchController.text.trim());
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _performSearch(_searchController.text.trim());
+                        },
+                        tooltip: 'Search Pets',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner),
+                        onPressed: () => _navigateToScanner(context),
+                        tooltip: 'Scan a Code',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.list_alt, size: 28),
+                    label: const Text('Show Full Pet List'),
+                    onPressed: () {
+                      FocusScope.of(context).unfocus();
+                      _searchController.clear();
+                      _performSearch('');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ],
               ),
             const Spacer(),
           ],
