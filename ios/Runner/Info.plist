@@ -31,10 +31,16 @@
 	<key>NSCameraUsageDescription</key>
     <string>This app needs camera access to scan QR codes.</string>
 	<key>UISupportedInterfaceOrientations</key>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>This app needs access to your location to provide location-based features and for security purposes.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>This app needs background access to your location to provide continuous location-based services.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>This app needs background access to your location to provide continuous location-based services.</string>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
