@@ -1,19 +1,12 @@
-import 'dart:convert';
 import 'package:my_awesome_app/api/api_client.dart';
 import 'package:my_awesome_app/models/pet_model.dart';
-import 'package:http/http.dart' as http;
 import 'package:my_awesome_app/utils/api_endpoints.dart';
-import 'package:my_awesome_app/utils/app_config.dart';
 
 class PetService {
   final ApiClient _apiClient = ApiClient();
-  final String _baseUrl = AppConfig.baseUrl;
 
   Future<List<Pet>> getPets(String token) async {
-    // Construct the full URL to the endpoint
-    // final url = Uri.parse('$_baseUrl/api/pet');
-    final url = '/api/pet';
-    print('PetService, getPets, url: $url');
+    print('PetService, getPets, ApiEndpoints.pet: $ApiEndpoints.pet');
     try {
       // 1. Await the response from the ApiClient. It will be of type 'dynamic'.
       final dynamic responseData = await _apiClient.get(
